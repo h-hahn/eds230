@@ -1,0 +1,60 @@
+---
+title: "Sensitivity_LHS_2"
+author: "Hope Hahn"
+date: "2024-04-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(sensitivity)
+library(tidyverse)
+library(lhs)
+library(purrr)
+```
+
+```{r}
+# for formal sensitivity analysis it is useful to describe output in
+# several summary statistics - how about mean, max and min yield
+source(here::here("class_material", "week3", "Catm.R"))
+
+# set a random seed to make things 'random'
+set.seed(1)
+
+# which parameters
+pnames = c("v", "height", "k_o", "k_d")
+
+# how many parameters
+npar =  length(pnames)
+# how many samples
+nsample = 100
+
+parm_quant = randomLHS(nsample, npar)
+colnames(parm_quant)=pnames
+# choose distributions for parameters - this would come from
+# what you know about the likely range of variation
+# then use our random samples to pick the quantiles
+
+parm = as.data.frame(matrix(nrow=nrow(parm_quant), ncol=ncol(parm_quant)))
+colnames(parm) = pnames
+# for each parameter pick samples 
+# I'm using several examples normal distribution (with 10% standard deviation) and uniform with +- 10%
+# in reality I should pick distribution from knowledge about uncertainty in parameters
+# to make it easy to change i'm setting standard deviation / range variation to a variable
+
+pvar = 100
+
+parm[,"v"] = qnorm(parm_quant[,"v"], mean=250, sd=30)
+parm[,"height"] = qunif(parm_quant[,"height"], min = 9.5, max = 10.5)
+
+
+
+parm[,"k_o"] = qnorm(parm_quant[,"k_o"], , sd=0.28/pvar)
+# note I could also index by column number by names keep things more clear, fewer mistakes
+#parm[,5] = qnorm(parm_quant[,5], mean=0.28, sd=0.28/pvar)
+
+head(parm)
+
+```
+
