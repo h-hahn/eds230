@@ -12,7 +12,7 @@ library(sensitivity)
 ```
 
 ```{r sen}
-source("../R/dpopgrowth.R")
+source(here::here("class_material", "week6", "dpopgrowth.R"))
 
 dpopgrowth
 
