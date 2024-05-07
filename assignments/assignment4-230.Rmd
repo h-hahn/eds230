@@ -1,0 +1,104 @@
+---
+title: "Assignment4"
+author: "Hope Hahn"
+date: "2024-04-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(sensitivity)
+library(tidyverse)
+library(gridExtra)
+library(purrr)
+library(ggpubr)
+```
+
+### Generate parameter values
+
+```{r}
+source(here::here("class_material", "week3", "Catm.R"))
+
+# generate two examples of random number from parameter distributions
+
+np=1000
+k_o = rnorm(mean=0.1,sd=0.1*0.01, n=np)
+k_d = rnorm(mean=0.7, sd=0.7*0.01, n=np)
+v = rnorm(mean=300, sd=50, n=np)
+height = runif(min=3.5, max=5.5, n=np)
+
+X1 = cbind.data.frame(k_o, k_d, v, height=height)
+
+# repeat sampling
+k_o = rnorm(mean=0.1,sd=0.1*0.01, n=np)
+k_d = rnorm(mean=0.7, sd=0.7*0.01, n=np)
+v = rnorm(mean=300, sd=50, n=np)
+height = runif(min=3.5, max=5.5, n=np)
+
+X2 = cbind.data.frame(k_o, k_d, v, height=height)
+
+# there are different versions of sobol functions that have different approaches for estimating parameters and indices, we use an approach implemented by jansen 
+
+sens_Catm_Sobol = sobolSalt(model = NULL, X1, X2, nboot = 100)
+
+
+# Take a look at the Sobol generated sensitivity object
+# your parameters sets for sensitivity analysis are in X
+```
+
+### Run atmospheric conductance model
+```{r}
+# run model for all parameter sets
+# make sure you give the parameters names
+
+parms = as.data.frame(sens_Catm_Sobol$X)
+colnames(parms)= colnames(X1)
+res = pmap_dbl(parms, Catm)
+
+
+sens_Catm_Sobol = sensitivity::tell(sens_Catm_Sobol,res, res.names="ga")
+
+# main effect:  partitions variance (main effect without co-variance) - sums approximately to one
+# useful to add names
+row.names(sens_Catm_Sobol$S) = colnames(parms)
+sens_Catm_Sobol$S
+
+# total effect - accounts for parameter interactions
+row.names(sens_Catm_Sobol$T) = colnames(parms)
+sens_Catm_Sobol$T
+
+# Both the main effect and total effect can tell us something about how the parameter influences results
+```
+
+### Plot 
+
+```{r}
+# graph two most sensitive parameters
+both = cbind.data.frame(parms, gs=sens_Catm_Sobol$y)
+
+# look at overall gs sensitvity to uncertainty
+ggplot(both, aes(x=gs))+
+  geom_histogram()+
+  geom_vline(xintercept=mean(both$gs), col="cornflowerblue") +
+  labs(x = "Conductance (mm/s)",
+       title = "Uncertainty of Conductance") +
+  theme_minimal()
+
+# look at response of conductance to the two interesting variables
+ggplot(both, aes(v,gs, col=height))+
+  geom_point()+
+  labs(y="Conductance (mm/s)", 
+       x="Windspeed",
+       col = "vegetation height",
+       title = "Windspeed vs Conductance (colored by vegetation height)") +
+  theme_minimal()
+```
+
+### Discussion
+
+When looking at the first order indices of this sensitivity analysis, k_o and k_d do not have significant effects on conductance, meaning that the outcome of this model is not sensitive to these parameters. The confidence interval crosses 0, which means that conductance is not sensitive to these parameters. Windspeed is the parameter that the model is most sensitive to, while height is the second most sensitive parameter. When looking at the total effects, k_o and k_d do not cross 0 (in CI), but the effects are still very, very small, meaning that the model is not very sensitive to these parameters. Windspeed still has the highest total effect and height has the second highest total effect. 
+
+This is different to the model in class where windspeed was less variable and lower and vegetation was taller. When this was the case, k_o and k_d had higher effects and the model was the most sensitive to these parameters, while windspeed and height had small/insignificant effects on the outcome variable. This new model with higher/variable windspeed and shorter vegetation has negligible effects from k_o and k_d while the model is much more sensitive to windspeed and height. 
+In this assignment's model, k_o and k_d had very low standard deviation, which meant that there was not much distribution in these parameters. Because of this, it makes sense that the model was not very sensitive to these parameters, since there was not much variation in them. A higher variation in windspeed allows a higher variation in conductance. Looking at the windspeed vs conductance plot shows us that vegetable height has a relationship with windspeed and conductance, and changes in windspeed is highly correlated with changes in conductance. For a single value of windspeed, a lower vegetation height leads to a lower conductance, while a higher vegetation height causes a higher amount of atmospheric conductance. Which means that with these parameters, higher windspeed and taller vegetation causes higher conductance. 
+
