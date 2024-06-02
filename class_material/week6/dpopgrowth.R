@@ -11,4 +11,5 @@ dpopgrowth = function(Time, P, parms) {
 
 	dP = parms$r * P * (1- P/parms$K)
 	return(list(dP))
+	
 }

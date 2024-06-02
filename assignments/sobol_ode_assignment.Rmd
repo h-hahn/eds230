@@ -1,0 +1,169 @@
+---
+title: "Sobol with ODE Assignment"
+author: "Hope Hahn"
+date: "2024-05-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(deSolve)
+library(sensitivity)
+```
+
+**Run the Model for 300 years with ODE Solver**
+
+Run the model with set parameters for 300 years and then graph results:
+
+```{r}
+# source the function
+source(here::here("assignments", "forest_growth.R"))
+
+# set the parameter values
+initial_forest <- 10
+thresh <- 50
+K <- 250
+r <- 0.01
+g <- 2 
+
+# set parameter list
+parms <- list(r = r, g = g, K = K, thresh = thresh)
+
+# results for 300 years
+simtime <- seq(from = 1, to = 300)
+
+# run ode solver
+result <- ode(y = initial_forest, times = simtime, func = forest_growth, parms = parms)
+
+# change the column names of the results
+colnames(result)=c("time", "forest_cover")
+
+# change to data frame
+result_df <- as.data.frame(result)
+
+# plot results
+ggplot(result_df, aes(x = time, y = forest_cover)) +
+  geom_point() +
+  theme_classic() +
+  labs(x = "Years",
+       y = "Forest Cover (C)",
+       title = "Forest cover over time")
+```
+
+**Sobol Sensitivity with ODE**
+
+Run sobol sensitivity with ODE and plot max forest size:
+
+```{r}
+# set new sobol parameters
+K <- rnorm(mean = 250, sd = (250 * 0.1), n = 2000)
+r <- rnorm(mean = 0.01, sd = (0.01 * 0.1), n = 2000)
+g <- rnorm(mean = 2, sd = (2 * 0.1), n = 2000)
+
+# create a df of the parameters
+X1 <- cbind.data.frame(K = K, r = r, g = g)
+
+# repeat sampling
+K <- rnorm(mean = 250, sd = (250 * 0.1), n = 2000)
+r <- rnorm(mean = 0.01, sd = (0.01 * 0.1), n = 2000)
+g <- rnorm(mean = 2, sd = (2 * 0.1), n = 2000)
+
+# create second df
+X2 <- cbind.data.frame(K = K, r = r, g = g)
+
+# fix any negative values 
+X1 <- X1 %>% 
+  map_df(pmax, 0.0)
+X2 <- X2 %>% 
+  map_df(pmax, 0.0)
+
+# sobol object
+sens_C <- sobolSalt(model = NULL, X1, X2, nboot = 300)
+
+# change column names to parameter names
+colnames(sens_C$X)= colnames(X1)
+```
+
+```{r}
+# turn computing our metrics into a function
+compute_metrics = function(result, thresh) {
+  maxgrowth = max(result$C)
+  idx = which(result$C > thresh)[1]
+  idx = ifelse(is.na(idx), length(result$C), idx)
+  threshyear = result$time[idx]
+  return(list(maxgrowth=maxgrowth, threshyear=threshyear))}
+
+# define a wrapper function to do everything we need - run solver and compute metrics - and send back results for each parameter
+c_wrapper = function(r, K, g, thresh, initial, simtimes, odefunc, metricfunc) {
+  parms = list(r=r, K=K, g=g, thresh=thresh)
+  result = ode(y=initial, times=simtime, func=odefunc, parms=parms) 
+  colnames(result)=c("time","C")
+  # get metrics
+  metrics=metricfunc(as.data.frame(result), thresh)
+  return(metrics)
+}
+
+# now use pmap as we did before
+allresults <- as.data.frame(sens_C$X) %>% 
+  pmap(function(r, K, g) {
+    c_wrapper(r = r, K = K, g = g, 
+              initial = initial_forest, 
+              simtime = simtime, 
+              odefunc = forest_growth, 
+              metricfunc = compute_metrics,
+              thresh = thresh)
+  })
+
+# extract out results from pmap into a data frame
+allres <- allresults %>% 
+  map_dfr(`[`,c("maxgrowth","threshyear"))
+
+# create boxplots
+tmp <- allres %>% 
+  pivot_longer(cols=everything(),names_to="metric", values_to="value")
+
+ggplot(tmp, aes(metric, value, col=metric)) + 
+  geom_boxplot() +
+  theme_classic() +
+  labs(title = "metrics over parameters variation",)
+```
+
+**Sobol Indices**
+
+Calculate sobol indices.
+
+**Tables of sensitivity for Max growth (Main effect and total effect)**
+
+```{r}
+# sobol can only handle one output at a time  - so we will need to do them separately
+sens_C_maxgrowth <- sensitivity::tell(sens_C, allres$maxgrowth)
+
+# first-order indices (main effect without co-variance)
+rownames(sens_C_maxgrowth$S)=c("r", "K", "g")
+sens_C_maxgrowth$S
+
+# total sensitivity index -note that this partitions the output variance 
+rownames(sens_C_maxgrowth$T)=c("r", "K", "g")
+sens_C_maxgrowth$T
+```
+
+**Tables of sensitivity for Threshold year (Main effect and total effect)**
+
+```{r}
+# create another one for max year
+sens_C_threshyear = sensitivity::tell(sens_C,allres$threshyear)
+# first-order indices (main effect without co-variance)
+rownames(sens_C_threshyear$S)=c("r", "K", "g")
+sens_C_threshyear$S
+
+# total sensitivity index -note that this partitions the output variance - so values sum to 1
+rownames(sens_C_threshyear$T)=c("r", "K", "g")
+sens_C_threshyear$T
+```
+
+**Interpretation**
+
+The results of the sensitivity analysis show that the max amount of growth is most sensitive to K, and second most sensitive to r. The year that the forest reaches the threshold is most sensitive to K as well. However, the other indices or r and g are much lower than K, meaning that K likely effects this metric significantly more than r and g. This is in contrast to looking at max growth, in which each indices is relatively close to one another. Climate change may influence the range in which trees are able to grow, which would limit carrying capacity. Because threshold year is most sensitive to K, this metric would be most influenced with climate change.
+
