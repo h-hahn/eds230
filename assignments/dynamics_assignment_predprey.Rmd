@@ -1,0 +1,41 @@
+---
+title: "dynamics_assignment2"
+author: "Hope Hahn"
+date: "2024-06-04"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(sensitivity)
+library(tidyverse)
+```
+
+## PART 1
+
+Lotka-volterra with hunting function:
+
+I added the hunting rate conditional on a minimum prey population. Hunting will only occur when there is at least a `minprey` amount of prey, and it is added to the equation as a hunting rate multiplied by the prey population.
+
+```{r}
+source(here::here("assignments", "lotvmod-hunt.R"))
+lotvmodhunt
+```
+
+## PART 2
+
+Sobol Sensitivity Analysis
+
+```{r}
+# set standard parameter values
+rprey <- 0.95
+alpha <- 0.01
+eff <- 0.6
+pmort <- 0.4
+K <- 2000
+minprey <- 0.6 * K
+```
+
+
+

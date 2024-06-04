@@ -1,0 +1,149 @@
+---
+title: "Dynamics with 2 variables"
+author: "Hope Hahn"
+date: "2024-06-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(sensitivity)
+library(tidyverse)
+library(deSolve)
+```
+
+# PART 1
+
+Lotka-volterra with hunting function:
+
+I added the hunting rate conditional on a minimum prey population. Hunting will only occur when there is at least a `minprey` amount of prey, and it is added to the equation as a hunting rate multiplied by the prey population.
+
+```{r}
+source(here::here("assignments", "lotvmod-hunt.R"))
+lotvmodhunt
+```
+# PART 2:
+
+Test different hunting/minimum prey values on Predator and Prey Stability
+
+I set the standard values for rprey, alpha, eff, pmort, and K, and I also set minprey a set value, so I could set the starting population level above this and hunting effects would be accounted for when testing the model. I will change minprey manually when setting parameters in later chunks.
+
+I am testing what combination of values is best to maintain predator and prey stability. I am defining stability as the population "stabling out" around 100 time points on the graph. It may not necessarily level out completely, but if it is following a consistent, cyclic pattern above 0, I would consider it stable, especially if the amplitude seems like it is decreasing.
+
+```{r}
+## SETUP
+# set standard parameter values
+rprey <- 0.95
+alpha <- 0.01
+eff <- 0.6
+pmort <- 0.4
+K <- 2000
+minprey <- 300
+
+# set initial population
+pop = c(prey = 500, pred = 300)
+
+# set time period 
+time <- seq(1, 100)
+```
+
+### Test ODE with low hunting rate
+
+I used the minprey value I set earlier and set the hunting level relatively low, to 0.3. In this graph, The predators and prey have a consistent, cyclic pattern, and it seems to be leveling off. The values are well above 0 by time point 100, and it looks like prey populations are increasing at this time, following with an increase in predators. The amplitude seems like it is flattening out. 
+
+```{r}
+# save parameters with low hunt
+pars1 = list(rprey = rprey, alpha = alpha, eff = eff, pmort = pmort, K = K, minprey = minprey, hunt = 0.3)
+
+# run ode with low hunt
+res1 = ode(func = lotvmodhunt, times = time, y = pop, parms = pars1)
+
+# rename columns
+colnames(res1)=c("time","prey", "pred")
+res1 <- as.data.frame(res1)
+
+# make column longer for plotting
+res1 <- res1 %>%  
+  pivot_longer(cols = c(pred, prey), names_to = "type", values_to = "value") 
+
+# plot values
+ggplot(as.data.frame(res1), aes(time, value, color = type))+
+  geom_line() 
+```
+
+### Test ODE with high hunt rate
+
+In this test, I used a high hunting rate and the same minprey value as previously. This graph is extremely unstable, and prey die out quite drastically, likely due to high hunting pressures as well as predator hunting. The drastic decrease of prey then removes a food source for the predators, causing predators to die off. These parameters are not stable.
+
+```{r}
+# save parameters with high hunt
+pars2 = list(rprey = rprey, alpha = alpha, eff = eff, pmort = pmort, K = K, minprey = minprey, hunt = 0.7)
+
+# run ode with high hunt
+res2 = ode(func = lotvmodhunt, times = time, y = pop, parms = pars2)
+
+# rename columns
+colnames(res2)=c("time","prey", "pred")
+res2 <- as.data.frame(res2)
+
+# make column longer for plotting
+res2 <- res2 %>%  
+  pivot_longer(cols = c(pred, prey), names_to = "type", values_to = "value") 
+
+# plot values
+ggplot(as.data.frame(res2), aes(time, value, color = type))+
+  geom_line() 
+```
+
+### Test with low hunt rate, and higher minprey
+
+When I changed minprey to be higher and kept the hunt rate low, the population appears to stable off at 100 time points. This model did not use hunting rate even though I set it due to the fact that the minprey value is above the starting populations, so hunting rate is not taken into the model. However, it is interesting because the fluctuations are much more drastic than the first test. It is possible that hunting helps stable out the population by decreasing prey faster, so then predators decrease due to lack of resources, decreasing amplitude of the cycle faster. However, it still seems relatively stable, the prey seem to be dropping off at this point, but does not appear to be heading to 0.
+
+```{r}
+# save parameters with low hunt, high minprey
+pars3 = list(rprey = rprey, alpha = alpha, eff = eff, pmort = pmort, K = K, minprey = 1200, hunt = 0.1)
+
+# run ode 
+res3 = ode(func = lotvmodhunt, times = time, y = pop, parms = pars3)
+
+# rename columns
+colnames(res3)=c("time","prey", "pred")
+res3 <- as.data.frame(res3)
+
+# make column longer for plotting
+res3 <- res3 %>%  
+  pivot_longer(cols = c(pred, prey), names_to = "type", values_to = "value") 
+
+# plot values
+ggplot(as.data.frame(res3), aes(time, value, color = type))+
+  geom_line() 
+```
+
+### Test with medium hunt rate
+
+Testing with medium hunt rate and reverting back to the other minimum prey value yielded results similar to the second test. It does seem like the predator populations are increasing again at the end, but I would not consider this a stable patter, and it is not regularly cyclical. This hunting rate seems to be the lowest level that would begin to cause instability.
+
+```{r}
+# save parameters with low hunt, high minprey
+pars4 = list(rprey = rprey, alpha = alpha, eff = eff, pmort = pmort, K = K, minprey = minprey, hunt = 0.5)
+
+# run ode 
+res4 = ode(func = lotvmodhunt, times = time, y = pop, parms = pars4)
+
+# rename columns
+colnames(res4)=c("time","prey", "pred")
+res4 <- as.data.frame(res4)
+
+# make column longer for plotting
+res4 <- res4 %>%  
+  pivot_longer(cols = c(pred, prey), names_to = "type", values_to = "value") 
+
+# plot values
+ggplot(as.data.frame(res4), aes(time, value, color = type))+
+  geom_line() 
+```
+
+### Conclusion
+
+Based on the tests I ran with multiple hunting values, a low hunting value, regardless of minimum prey size (as long as its above 300 since I did not test below 300), would be most sustainable. A hunting rate value of 0.3 seems to be favorable as the population seems to be on the track to "level out" by time point 100. For the other tests that involved higher hunting levels, the populations did not have regular cyclical patterns, and some of the populations faced near extinction. To ensure that both populations persist, I suggest a hunting level no more than 0.3.

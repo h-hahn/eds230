@@ -1,4 +1,4 @@
-#' Lot. Voltera Model
+#' Lot. Voltera Model with hunting
 #'
 #' function computes the rate of change of populations in a predictor prey interaction
 #' @param t  time (days)
@@ -7,7 +7,9 @@
 #'  \emph{rprey} is growth rate of prey population;
 #'  \emph{eff} is the rate of ingestion of prey by predators
 #'  \emph{alpha} is a interaction coefficient (higher values greater interaction
-#'  \emph{pmort}  mortality rate of predictor population
+#'  \emph{pmort} mortality rate of predictor population
+#'  \emph{hunt} rate of hunting on prey population
+#'  \emph{minprey} minimum amount of prey allowed before hunting
 #' @examples
 #' lotvod(t=1, pop=list(1,2), pop=list(0.5,0.3,0.2,0.2))
 #'
@@ -22,18 +24,18 @@
 #' \item{dpred}{rate of change of preditor populutation}
 #'}
 
-lotvmodK = function(t, pop, pars) {
+lotvmodhunt = function(t, pop, pars) {
   
-with(as.list(c(pars,pop)), {
-  
-dprey = rprey * (1-prey/K) * prey - alpha * prey * pred
-dpred = eff * alpha * prey * pred - pmort * pred
-
-return(list(c(dprey,dpred)))
-})
+  with(as.list(c(pars,pop)), {
+    
+    (if (prey < minprey)
+      dprey = rprey * (1-prey/K) * prey - alpha * prey * pred
+    else 
+      dprey = rprey * (1-prey/K) * prey - alpha * prey * pred - hunt * prey)
+      
+      dpred = eff * alpha * prey * pred - pmort * pred
+    
+    return(list(c(dprey,dpred)))
+  })
   
 }
-
-
-
-

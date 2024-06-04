@@ -124,7 +124,7 @@ $\frac{\partial pred}{\partial t} = eff * \alpha * pred * prey - mort * pred$
 # Example implementation
 
 ```{r}
-source("../R/lotvmod.R")
+source(here::here("class_material", "week8", "lotvmod.R"))
 lotvmod
 
 # note the use of with
@@ -214,7 +214,7 @@ $\frac{\partial pred}{\partial t} = eff * \alpha * pred * prey - mort * pred$
 
 ```{r examples}
 
-source("../R/lotvmodK.R")
+source(here::here("class_material", "week8", "lotvmodK.R"))
 lotvmodK
 
 # initial conditions
@@ -297,7 +297,7 @@ $\frac{\partial s_2}{\partial t} = r_{2} * s_2 * (1-(\frac{s_2+\alpha_{21} * s_1
 Lets look at a Lorenz System Code
 ```{r lorenze}
 # lorenze
-source("../R/lorenz.R")
+source(here::here("class_material", "week8", "lorenz.R"))
 
 lorenz
 ```
@@ -372,7 +372,7 @@ Given that we start with 1 predator and 1 prey and run for 500 time steps
 
 ```{r odesen}
 
-source("../R/lotvmodK.R")
+source(here::here("class_material", "week8", "lotvmodK.R"))
 # lets start with sobol 
 library(sensitivity)
 
@@ -625,7 +625,7 @@ Try setting you initial conditions close to these values and see what happens
 
 ```{r stabilitynew}
 
-source("../R/lotvmodK.R")
+source(here::here("class_material", "week8", "lotvmodK.R"))
 # set parameter list
 pars = data.frame(rprey=0.1, alpha=0.6, eff=0.8,pmort=0.4, K=200)
 
@@ -660,6 +660,4 @@ p2
 # explore with some different parameters
 
 ```
-
-
 

@@ -30,7 +30,7 @@ Think about what you would need to do to make this realistic
 
 ```{r fixed}
 
-source("../R/dharvestfixed.R")
+source(here::here("class_material", "week6", "dharvestfixed.R"))
 
 dharvestfixed
 ```
@@ -128,7 +128,7 @@ EJ?
 using proportional harvest,  what rate leads to a stable forest
 
 ```{r stableforest}
-source("../R/dharvest.R")
+source(here::here("class_material", "week6", "dharvest.R"))
 tm = seq(from=1, to=100)
 Cinitial = 30
 gps = list(harv=0.1, K=1000, r=0.05, mincarbon=20)
@@ -269,7 +269,7 @@ try repeating above with lower and higher harvest rates
 
 ```{r stability2}
 
-source("../R/dharvest.R")
+source(here::here("class_material", "week6", "dharvest.R"))
 dharvest
 
 # given some forest characteristics - lets look at derivatives under different harvest rates
@@ -282,7 +282,7 @@ findstable = data.frame(Ccurr=seq(from=1, to=100, by=5))
 # notice use of Time=NULL, and map to compute derivative
 # for different values of forest biomass
 findstable$dervHlow= unlist(findstable$Ccurr %>% map(~dharvest(parms=gps, Time=NULL, biomass=.x) ))
-                                                  
+
 ggplot(findstable, aes(Ccurr, dervHlow))+geom_point()+geom_hline(yintercept = 0, col="red")+
   labs(y="Derivative\n (Rate of change of forest carbon) (kg/C/year)", x="Current Forest Carbon Stock (kgC)")
 
@@ -362,7 +362,7 @@ Think about how you would explore stability here
 
 ```{r stability}
 
-source("../R/dharvestfixed.R")
+source(here::here("class_material", "week6", "dharvestfixed.R"))
 
 # first lets look at how the derivative varies with the size of forest
 
