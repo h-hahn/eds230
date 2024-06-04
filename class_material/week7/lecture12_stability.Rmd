@@ -384,12 +384,12 @@ b=ggplot(as.data.frame(res), aes(time, carbon))+geom_point()+
    labs(y="Forest Biomass (kgC)", x="Year", title="Fixed Harvest of 10kg/year\n Starting conditions 500kgC")
 ggarrange(a,b)
 
-#  try smaller starting condition
+# try smaller starting condition
 tm = seq(from=1, to=500)
 Pinitial = 150
 gps = list(harv=10, K=1000, r=0.05, mincarbon=0)
 
-res = ode(Pinitial,tm, dharvestfixed, gps)
+res = ode(Pinitial, tm, dharvestfixed, gps)
 colnames(res)=c("time","carbon")
 
 c=ggplot(as.data.frame(res), aes(time, carbon))+geom_point()+
